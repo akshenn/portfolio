@@ -430,6 +430,7 @@
     padding: .7rem .8rem .7rem 1rem; border-radius: 14px; background: rgba(20,18,30,.92); color: #fff; font-size: 14px; line-height: 1.35;
     border: 1px solid rgba(140,116,245,.55); box-shadow: 0 8px 28px rgba(0,0,0,.45); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
   .inapp-note b { color: var(--purple-hi); font-weight: 600; }
+  .inapp-note a { color: var(--purple-hi); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
   .inapp-note button { flex: none; margin-left: auto; width: 32px; height: 32px; border: 0; border-radius: 50%; background: rgba(255,255,255,.12); color: #fff; font-size: 20px; line-height: 1; cursor: pointer; }
   html.gated, html.gated body { overflow: hidden; overscroll-behavior: none; }
   html.gated body { position: fixed; inset: 0; width: 100%; }
@@ -1204,7 +1205,7 @@ const SITE = {
     cover: "media/las-vegas.mp4", // the Las Vegas reel, full screen (if this file goes missing, the Instagram reel shows instead)
     poster: "media/las-vegas-poster.jpg",
     profiles: [           // profile previews; add  image: "..."  to show a screenshot instead of the live page
-      { site: "TikTok",    url: "https://www.tiktok.com/@most.wanted.film",    stat: "2.3M views on comedy and trend videos.",
+      { site: "TikTok",    url: "https://www.tiktok.com/@most.wanted.film",    stat: "2.3M views through deliberate trends and hooks.",
         image: CANVA + "media/4906af23f57c228e85119073be14dbb6.jpg" },   // your TikTok profile screenshot (from Canva)
       { site: "Instagram", url: "https://www.instagram.com/most.wanted.film/", stat: "Fashion show recaps, travel reels and edits." },
     ],
@@ -1263,8 +1264,20 @@ const SITE = {
   if (IN_APP) addEventListener("DOMContentLoaded", () => {
     try { if (sessionStorage.getItem("inapp-note") === "x") return; } catch (e) {}
     const n = document.createElement("div"); n.className = "inapp-note"; n.setAttribute("role", "status");
-    n.innerHTML = '<span>For the full experience with sound and films, tap <b>&middot;&middot;&middot;</b> then <b>Open in browser</b>.</span><button type="button" aria-label="Dismiss">&times;</button>';
-    n.querySelector("button").addEventListener("click", () => { n.remove(); try { sessionStorage.setItem("inapp-note", "x"); } catch (e) {} });
+    n.innerHTML = '<span class="inapp-msg">For the full experience with sound and films, <a href="#" class="inapp-open">open in Safari</a>.</span><button type="button" class="inapp-x" aria-label="Dismiss">&times;</button>';
+    const msg = n.querySelector(".inapp-msg");
+    n.querySelector(".inapp-open").addEventListener("click", e => {
+      e.preventDefault();
+      const url = location.href.replace(/#.*$/, "") + location.hash;
+      // iOS 17+: the x-safari- prefix hands the page to Safari. If the app blocks it, fall back to copying the link.
+      location.href = "x-safari-" + url;
+      setTimeout(() => {
+        if (document.visibilityState !== "visible") return;            // it worked: we left the app
+        const done = ok => { msg.innerHTML = (ok ? "Link copied. " : "") + "Tap <b>&middot;&middot;&middot;</b> at the top, then <b>Open in browser</b>" + (ok ? ", or paste the link into Safari." : "."); };
+        if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => done(true), () => done(false)); else done(false);
+      }, 900);
+    });
+    n.querySelector(".inapp-x").addEventListener("click", () => { n.remove(); try { sessionStorage.setItem("inapp-note", "x"); } catch (e) {} });
     document.body.appendChild(n);
   });
   function inlineVideo() {
