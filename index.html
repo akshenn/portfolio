@@ -426,6 +426,11 @@
   }
 
   /* ---------- password gate (terminal style) ---------- */
+  .inapp-note { position: fixed; left: 12px; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 72px); z-index: 1100; display: flex; align-items: center; gap: .75rem;
+    padding: .7rem .8rem .7rem 1rem; border-radius: 14px; background: rgba(20,18,30,.92); color: #fff; font-size: 14px; line-height: 1.35;
+    border: 1px solid rgba(140,116,245,.55); box-shadow: 0 8px 28px rgba(0,0,0,.45); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+  .inapp-note b { color: var(--purple-hi); font-weight: 600; }
+  .inapp-note button { flex: none; margin-left: auto; width: 32px; height: 32px; border: 0; border-radius: 50%; background: rgba(255,255,255,.12); color: #fff; font-size: 20px; line-height: 1; cursor: pointer; }
   html.gated, html.gated body { overflow: hidden; overscroll-behavior: none; }
   html.gated body { position: fixed; inset: 0; width: 100%; }
   .gate { overscroll-behavior: contain; touch-action: none; }
@@ -1255,6 +1260,13 @@ const SITE = {
       return gesture ? play.call(this) : Promise.reject(new DOMException("Autoplay off in in-app browser", "NotAllowedError"));
     };
   }
+  if (IN_APP) addEventListener("DOMContentLoaded", () => {
+    try { if (sessionStorage.getItem("inapp-note") === "x") return; } catch (e) {}
+    const n = document.createElement("div"); n.className = "inapp-note"; n.setAttribute("role", "status");
+    n.innerHTML = '<span>For the full experience with sound and films, tap <b>&middot;&middot;&middot;</b> then <b>Open in browser</b>.</span><button type="button" aria-label="Dismiss">&times;</button>';
+    n.querySelector("button").addEventListener("click", () => { n.remove(); try { sessionStorage.setItem("inapp-note", "x"); } catch (e) {} });
+    document.body.appendChild(n);
+  });
   function inlineVideo() {
     const v = document.createElement("video");
     ["playsinline", "webkit-playsinline", "muted", "disablepictureinpicture", "disableremoteplayback"].forEach(a => v.setAttribute(a, ""));
@@ -1297,7 +1309,14 @@ const SITE = {
   const onScreenPlayer = new IntersectionObserver(entries => entries.forEach(en => {
     if (en.isIntersecting) en.target.play().catch(() => {}); else en.target.pause();
   }), { threshold: .15 });
+  // In TikTok/Instagram's browser, silent loops show as animated images (media/anim/*.webp), which play in the page.
+  const ANIM = ["c2352", "clip-831", "spur-last-shoot-day", "lucidity-2", "spur-promo", "elitemd-1", "elitemd-2", "elitemd-3"];
   function visual(url, alt) {
+    const base = (url.match(/media\/([^/#?]+)\.mp4/) || [])[1];
+    if (IN_APP && base && ANIM.includes(base)) {
+      const i = document.createElement("img"); i.src = "media/anim/" + base + ".webp"; i.alt = alt || ""; i.loading = "lazy"; i.decoding = "async";
+      return i;
+    }
     if (isVideo(url)) {
       const v = inlineVideo();
       v.loop = true; v.preload = "metadata"; v.src = IN_APP && !/#/.test(url) ? url + "#t=0.1" : url;
