@@ -1248,9 +1248,9 @@ const SITE = {
   if (SITE.scroll === "snap" && window.matchMedia("(min-width: 1024px)").matches) document.documentElement.classList.add("snap");
 
   /* ---------- turning a value into an image, video, embed or prompt ---------- */
-  // TikTok's (and Instagram's) in-app browser on iPhone forces every playing video full screen, whatever the page asks.
+  // TikTok's in-app browser on iPhone forces every playing video full screen, whatever the page asks.
   // There, videos only play when the visitor taps something; otherwise they sit still on their first frame.
-  const IN_APP = /musical_ly|BytedanceWebview|TikTok|trill|Instagram|FBAN|FBAV/i.test(navigator.userAgent) && /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const IN_APP = /musical_ly|BytedanceWebview|TikTok|trill/i.test(navigator.userAgent) && /iPhone|iPad|iPod/i.test(navigator.userAgent);
   if (IN_APP) {
     document.documentElement.classList.add("in-app");
     // only a real tap counts: "click" never fires at the end of a scroll swipe (touchend and user-activation do)
@@ -1261,7 +1261,8 @@ const SITE = {
       return gesture ? play.call(this) : Promise.reject(new DOMException("Autoplay off in in-app browser", "NotAllowedError"));
     };
   }
-  if (IN_APP) addEventListener("DOMContentLoaded", () => {
+  const IN_TIKTOK = IN_APP && /musical_ly|BytedanceWebview|TikTok|trill/i.test(navigator.userAgent);
+  if (IN_TIKTOK) addEventListener("DOMContentLoaded", () => {   // the "open in Safari" note: TikTok only
     try { if (sessionStorage.getItem("inapp-note") === "x") return; } catch (e) {}
     const n = document.createElement("div"); n.className = "inapp-note"; n.setAttribute("role", "status");
     n.innerHTML = '<span class="inapp-msg">For the full experience with sound and films, <a href="#" class="inapp-open">open in Safari</a>.</span><button type="button" class="inapp-x" aria-label="Dismiss">&times;</button>';
@@ -1322,7 +1323,7 @@ const SITE = {
   const onScreenPlayer = new IntersectionObserver(entries => entries.forEach(en => {
     if (en.isIntersecting) en.target.play().catch(() => {}); else en.target.pause();
   }), { threshold: .15 });
-  // In TikTok/Instagram's browser, silent loops show as animated images (media/anim/*.webp), which play in the page.
+  // In TikTok's browser, silent loops show as animated images (media/anim/*.webp), which play in the page.
   const ANIM = ["c2352", "clip-831", "spur-last-shoot-day", "lucidity-2", "spur-promo", "elitemd-1", "elitemd-2", "elitemd-3"];
   function visual(url, alt) {
     const base = (url.match(/media\/([^/#?]+)\.mp4/) || [])[1];
