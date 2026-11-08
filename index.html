@@ -19,6 +19,7 @@
                                                                          // Tried in order: if one won't load, the next plays. [] for silence.
   try { if (window.GATE && sessionStorage.getItem("gate-open") !== "1") document.documentElement.classList.add("gated"); }
   catch (e) { if (window.GATE) document.documentElement.classList.add("gated"); }
+  document.addEventListener("touchmove", e => { if (document.documentElement.classList.contains("gated")) e.preventDefault(); }, { passive: false });
 </script>
 
 <!--
@@ -130,6 +131,12 @@
   .split.flip > .split-media { order: -1; }
   .split-text { align-self: center; padding: calc(64px + clamp(2rem, 5vw, 4rem)) clamp(1.5rem, 4vw, 4rem) clamp(3rem, 6vw, 5rem) var(--gutter); max-width: 760px; }
   .split.flip > .split-text { padding-left: clamp(1.5rem, 4vw, 4rem); padding-right: var(--gutter); }
+  .split > .split-text.breakdown { padding-left: clamp(1.5rem, 4vw, 4rem); padding-right: var(--gutter); }
+  .breakdown .scene-list { margin-top: .75rem; }
+  .split.split-compact { min-height: 0; }
+  .split-compact > .split-text { padding-top: clamp(3rem, 6vw, 5rem); padding-bottom: clamp(3rem, 6vw, 5rem); }
+  @media (max-width: 900px) { .split-compact > .split-text:first-child { padding-bottom: 2.5rem; } }
+  @media (max-width: 900px) { .split > .split-text.breakdown { padding: 0 var(--gutter) clamp(3.5rem, 12vw, 5rem); } }
   .split-media { position: relative; min-height: 70vh; background: var(--slot); overflow: hidden; }
   .split-media > img, .split-media > video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .split-media.is-embed { display: flex; align-items: center; justify-content: center; padding: clamp(1rem, 3vw, 3rem); background: #000; }
@@ -145,6 +152,9 @@
   .split-text p { color: var(--fg-2); max-width: 48ch; margin: 0 0 1rem; }
   .split-text .lead { color: var(--fg); }
   .split-text p a { color: var(--fg); }
+  .split-text p strong { color: var(--fg); font-weight: 600; }
+  .split-text p em { color: var(--fg); }
+  .split-text .thanks { margin-top: 1.75rem; font-size: 15px; max-width: 520px; }
   .actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.75rem; }
 
   .facts { list-style: none; margin: 1.75rem 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem 2rem; max-width: 560px; }
@@ -207,12 +217,13 @@
   .scene-film video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
   .scene-num { font-family: var(--display); font-size: 1rem; letter-spacing: .04em; color: var(--fg-3); margin: 0 0 .5rem; }
   .theme-line { font-size: clamp(1.15rem, 1.6vw, 1.4rem); margin: 0 0 1.25rem; color: var(--fg); }
-  .design { margin: 1.5rem 0 0; display: grid; grid-template-columns: max-content 1fr; gap: .6rem 1.25rem; max-width: 560px; }
-  .design dt { font-weight: 600; }
-  .design dd { margin: 0; color: var(--fg-2); }
   .photo-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
   .photo-row > * { position: relative; aspect-ratio: 3 / 4; overflow: hidden; background: var(--slot); }
   .photo-row img, .photo-row video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .photo-row.has-wide { grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); }   /* rows with wide items: one line, heights match */
+  .photo-row > .wide { grid-column: span 2; aspect-ratio: 3 / 2; }
+  .photo-row.has-ratio { grid-template-columns: var(--ratio-cols); }   /* widths follow each picture's shape, so heights match with no cropping */
+  @media (max-width: 560px) { .photo-row.has-wide, .photo-row.has-ratio { grid-template-columns: 1fr; } .photo-row > .wide { grid-column: auto; } }
   .scene-list { list-style: none; margin: 1.5rem 0 0; padding: 0; max-width: 520px; }
   .scene-list li { border-top: 1px solid var(--rule); }
   .scene-list li:last-child { border-bottom: 1px solid var(--rule); }
@@ -302,7 +313,7 @@
 
   /* EliteMD: a row of tall tiles (photo + vertical videos); swipeable on phones */
   .vrow-section { padding-top: clamp(2.5rem, 6vw, 4.5rem); padding-bottom: clamp(3rem, 7vw, 5rem); }
-  .vrow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; max-width: 1100px; }
+  .vrow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.25rem; max-width: 1280px; }
   .vtile { position: relative; aspect-ratio: 9 / 16; background: var(--slot); overflow: hidden; }
   .vtile > img, .vtile > video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   @media (max-width: 700px) {
@@ -380,8 +391,6 @@
     .bar-nav .hide-sm { display: none; }
     .facts { grid-template-columns: 1fr; }
     .footer-links li:last-child { margin-left: 0; width: 100%; }
-    .design { grid-template-columns: 1fr; gap: .1rem; }
-    .design dd { margin-bottom: .6rem; }
     .dock-btn { min-width: 0; }
     .dock-btn .home, .dock-btn .sep { display: none !important; }
   }
@@ -416,7 +425,9 @@
   }
 
   /* ---------- password gate (terminal style) ---------- */
-  html.gated { overflow: hidden; }
+  html.gated, html.gated body { overflow: hidden; overscroll-behavior: none; }
+  html.gated body { position: fixed; inset: 0; width: 100%; }
+  .gate { overscroll-behavior: contain; touch-action: none; }
   .gate { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: var(--gutter);
     background: #000; color: #fff; font: 400 clamp(1.05rem, 2.2vw, 1.4rem)/1.75 var(--mono); letter-spacing: 0; cursor: text; transition: opacity .55s ease; }
   html:not(.gated) .gate:not(.is-open) { display: none; }
@@ -729,7 +740,7 @@
 <!-- ======================= SPUR ======================= -->
 <div class="page" data-page="spur" data-title="SPUR Fashion Show | Akshen Sivakumar" data-crumb="SPUR Fashion Show" hidden>
 
-  <section class="flush flush-169" data-src="spur.film" data-poster="spur.filmPoster" data-sound="true" aria-label="SOMNIA film">
+  <section class="flush flush-169" data-src="spur.film" data-mobile="spur.filmMobile" data-poster="spur.filmPoster" data-sound="true" aria-label="SPUR montage">
     <div class="flush-media"></div><div class="flush-shade"></div>
     <nav class="crumbs wrap" aria-label="Breadcrumb"><a href="#/">Home</a> &rsaquo; <a href="#/guide">Projects</a> &rsaquo; SPUR Fashion Show</nav>
     <div class="flush-inner wrap">
@@ -744,7 +755,7 @@
     </div>
   </section>
 
-  <section class="split" aria-labelledby="role-h">
+  <section class="split split-compact" aria-labelledby="role-h">
     <div class="split-text">
       <h2 class="h-display" id="role-h">My role</h2>
       <p class="lead">Head Executive of Visual Production, September 2025 to May 2026.</p>
@@ -757,7 +768,16 @@
         <li><strong>Liaison</strong><span>Between the creative team and external partners</span></li>
       </ul>
     </div>
-    <div class="split-media" data-src="spur.promo" data-fit="contain" aria-label="The SOMNIA lookbook and show program" data-prompt="A team photo or promo clip." data-size="Portrait 4:5"></div>
+    <div class="split-text breakdown" aria-labelledby="breakdown-h">
+      <p class="h-sub" id="breakdown-h">Scene breakdown</p>
+      <ul class="scene-list">
+        <li><button type="button" data-goto="lullaby"><b>1</b><strong>Lullaby</strong><span>Nostalgia; childlike innocence; freedom.</span></button></li>
+        <li><button type="button" data-goto="labyrinth"><b>2</b><strong>Labyrinth</strong><span>A nightmare sequence; overwhelming stress.</span></button></li>
+        <li><button type="button" data-goto="havoc"><b>3</b><strong>Havoc</strong><span>Chaos: anxiety; a hectic corporate environment.</span></button></li>
+        <li><button type="button" data-goto="lucidity"><b>4</b><strong>Lucidity</strong><span>Liberation; streetwear; popular culture.</span></button></li>
+      </ul>
+      <p class="thanks"><strong>Special thanks</strong> to our fellow creative executives, including but not limited to the <em>makeup</em>, <em>hair</em>, <em>props</em>, and <em>choreography</em> teams.</p>
+    </div>
   </section>
   <div class="photo-row" data-row="spurBts"></div>
   <figure class="wide-figure" data-src="spur.teamLabelled"></figure>
@@ -782,12 +802,6 @@
       <div class="split-text">
         <h3 class="h-display">SOMNIA</h3>
         <p class="lead">Four scenes, from a childhood daydream to waking up free.</p>
-        <ul class="scene-list">
-          <li><button type="button" data-goto="lullaby"><b>1</b><strong>Lullaby</strong><span>Nostalgia; childlike innocence; freedom.</span></button></li>
-          <li><button type="button" data-goto="labyrinth"><b>2</b><strong>Labyrinth</strong><span>A nightmare sequence; overwhelming stress.</span></button></li>
-          <li><button type="button" data-goto="havoc"><b>3</b><strong>Havoc</strong><span>Chaos: anxiety; a hectic corporate environment.</span></button></li>
-          <li><button type="button" data-goto="lucidity"><b>4</b><strong>Lucidity</strong><span>Liberation; streetwear; popular culture.</span></button></li>
-        </ul>
       </div>
       <div class="split-media" data-src="spur.lookbook" data-prompt="The SOMNIA lookbook and program." data-size="Any orientation"></div>
     </section>
@@ -800,13 +814,8 @@
         <p class="scene-num">SCENE 1</p>
         <h3 class="h-display">Lullaby</h3>
         <p class="theme-line">Nostalgia; childlike innocence; freedom.</p>
-        <p>The show opens in childhood: a playground, soft knits and flushed cheeks, filmed close and handheld like a home video.</p>
-        <dl class="design">
-          <dt>Palette</dt><dd>Cream, pastel pink and playground yellow</dd>
-          <dt>Styling</dt><dd>Soft knits, lace, slip dresses, blush worn high</dd>
-          <dt>Set</dt><dd>A playground in daylight</dd>
-          <dt>Camera</dt><dd>Handheld, selfie-style, warm and close</dd>
-        </dl>
+        <p>The first of four scene interludes introduces our opening group of dancers. Inspired by <strong>childhood innocence</strong> and imagined as a <strong>nostalgic dream</strong>, the montage builds its world through colour palette, whimsical atmosphere, and playful visual storytelling. It was shot on location at <em>Soho Studios</em>, <em>University Heights Public School</em>, and <em>London Public Library</em>.</p>
+        <p>The Beatles’ <strong>“Strawberry Fields Forever”</strong> was the perfect song for Scene 1. Its dreamy mood and eerie lyrics echo the themes of <em>Lullaby</em> while hinting at the scenes still to come; a nightmare is about to disrupt the narrative.</p>
         <p class="h-sub">Inspiration</p>
         <p data-inspo="lullaby">Add your references for this scene.</p>
       </div>
@@ -822,13 +831,8 @@
         <p class="scene-num">SCENE 2</p>
         <h3 class="h-display">Labyrinth</h3>
         <p class="theme-line">A nightmare sequence; overwhelming stress.</p>
-        <p>The dream turns. Childhood comes back distorted: alphabet blocks dripping with paint, faces painted white, light gone cold.</p>
-        <dl class="design">
-          <dt>Palette</dt><dd>Cold cyan, black and blood red</dd>
-          <dt>Styling</dt><dd>Spiked hair, white face paint, dark lips, long red nails</dd>
-          <dt>Set</dt><dd>Paint-dripped ABC blocks, dim doorways</dd>
-          <dt>Camera</dt><dd>Harsh flash and colour-shifted light</dd>
-        </dl>
+        <p>Instead of music, we opted for an <strong>eerie soundscape</strong> to set the tone of Scene 2. Meant to contrast our first scene, <em>Labyrinth</em> is an evocative <strong>nightmare sequence</strong> inspired by <strong>horror symbolism</strong>.</p>
+        <p>The childhood imagery of <em>Lullaby</em> returns distorted: alphabet blocks dripping with paint, faces painted white, and moody lighting. <strong>Creative photography</strong> and <strong>colour</strong> complement the scene’s horror elements. Shot on location at <em>Soho Studios</em> and a private backyard.</p>
         <p class="h-sub">Inspiration</p>
         <p data-inspo="labyrinth">Add your references for this scene.</p>
       </div>
@@ -844,13 +848,9 @@
         <p class="scene-num">SCENE 3</p>
         <h3 class="h-display">Havoc</h3>
         <p class="theme-line">Chaos: anxiety; a hectic corporate environment.</p>
-        <p>Office life at full speed: suits, laptops and folders colliding on a white studio set, shot in black and white.</p>
-        <dl class="design">
-          <dt>Palette</dt><dd>Black and white, with pinstripe navy</dd>
-          <dt>Styling</dt><dd>Blazers, ties, collared shirts, preppy headbands</dd>
-          <dt>Set</dt><dd>White studio, a desk buried in laptops and files</dd>
-          <dt>Camera</dt><dd>High angles and crowded, fast framing</dd>
-        </dl>
+        <p><em>Havoc</em> depicts the dread of <strong>corporate work culture</strong> and <strong>academia</strong>, building on the chaos of <em>Labyrinth</em>. Scene 3 is a <strong>chaotic manifestation of anxiety</strong>: office life at full speed, with papers flying and a desk buried in laptops and files.</p>
+        <p>Blazers, ties, collared shirts, and preppy headbands dress the cast, while high angles and crowded, fast framing keep the pressure on. Shot in black and white on a white set at <em>Soho Studios</em>.</p>
+        <p class="thanks"><strong>Special thanks</strong> to <em>Mateo Cannakis</em> for videography and editing.</p>
         <p class="h-sub">Inspiration</p>
         <p data-inspo="havoc">Add your references for this scene.</p>
       </div>
@@ -866,13 +866,8 @@
         <p class="scene-num">SCENE 4</p>
         <h3 class="h-display">Lucidity</h3>
         <p class="theme-line">Liberation; streetwear; popular culture.</p>
-        <p>The Dreamer wakes up free: streetwear, a crowd, a night out, and the cast dancing it off.</p>
-        <dl class="design">
-          <dt>Palette</dt><dd>Denim blue, neon red and Christmas-light green</dd>
-          <dt>Styling</dt><dd>Denim, caps, fur trapper hats, lace, leather</dd>
-          <dt>Set</dt><dd>Snowy streets, a packed garage, a neon bar</dd>
-          <dt>Camera</dt><dd>Fisheye lens, black-and-white dance takes</dd>
-        </dl>
+        <p>The Dreamer wakes up free. <em>Lucidity</em> closes the show surrounded by <strong>streetwear</strong>, <strong>community</strong>, and <strong>popular culture</strong>. Denim, caps, fur trapper hats, lace, and leather fill the frame, captured on <strong>fisheye and wide lenses</strong> across snowy streets, a packed garage, and a neon bar.</p>
+        <p>The second half takes its cue from the music video for Snoop Dogg and Pharrell’s <strong>“Drop It Like It’s Hot”</strong>, with black-and-white dance takes.</p>
         <p class="h-sub">Inspiration</p>
         <p data-inspo="lucidity">Add your references for this scene.</p>
       </div>
@@ -990,6 +985,7 @@
       <div class="vtile" data-src="elitemd.more.0" aria-label="EliteMD Aesthetics services banner in the clinic" data-prompt="A photo of your work." data-size="Vertical"></div>
       <div class="vtile" data-src="elitemd.more.1" data-prompt="Vertical video 1: an ad or reel (MP4)." data-size="9:16, e.g. 1080 × 1920"></div>
       <div class="vtile" data-src="elitemd.more.2" data-prompt="Vertical video 2: an ad or reel (MP4)." data-size="9:16, e.g. 1080 × 1920"></div>
+      <div class="vtile" data-src="elitemd.more.3" data-prompt="Vertical video 3: an ad or reel (MP4)." data-size="9:16, e.g. 1080 × 1920"></div>
     </div>
   </section>
   <nav class="next wrap" aria-label="More projects"><a href="#/social"><small>Next project</small><strong>Social media recap</strong></a><a href="#/guide">All projects</a></nav>
@@ -1133,10 +1129,11 @@ const SITE = {
   },
 
   spur: {
-    film: CANVA + "video/67ffcdbf402f74adfd70704cff199759.mp4",           // SOMNIA film from your Canva site
-    filmPoster: CANVA + "video/4ee75535cb75fd4cd1d463c8fd476d11.jpg",
-    promo: "media/booklets.jpg",                                          // beside "My role": the SOMNIA lookbook and program
-    bts: ["media/havoc-bts.jpg",
+    film: "media/spur-film.mp4",                                          // SPUR montage (top of the SPUR page)
+    filmMobile: "media/spur-film-720.mp4",
+    filmPoster: "media/spur-film-poster.jpg",
+    bts: [{ src: "media/booklets.jpg", wide: true },                  // the SOMNIA lookbook and program (was beside "My role")
+          "media/havoc-bts.jpg",
           "media/flowers.jpg",                                      // after the show, with flowers
           "media/edit-suite.jpg",
           "media/spur-last-shoot-day.mp4"],                         // "Last shoot day" story
@@ -1167,7 +1164,10 @@ const SITE = {
       lucidity: {
         video:  CANVA + "video/d8c0650d8684edbaa991011aa93cc106.mp4",
         poster: CANVA + "video/44ab9346f506d8af4ec1c85f04e7a7e7.jpg",
-        photos: ["media/lucidity-1.jpg"],
+        photos: ["media/lucidity-1.jpg",
+                 { src: "media/lucidity-2.mp4", ratio: 16 / 9 },     // dancers on the white set
+                 { src: "media/lucidity-3.jpg", ratio: 4 / 3 },      // snowy street (IMG_1766)
+                 { src: "media/spur-promo.mp4", ratio: 720 / 784 }], // Drop It Like It's Hot x Spur promo
         inspo:  { text: "", images: [] },
       },
     },
@@ -1191,8 +1191,9 @@ const SITE = {
     ],
     more: [              // the row of three tall tiles under the intro
       "media/img-1019.jpg",                                         // services banner in the clinic
-      "",                                                           // vertical video 1: e.g. "media/elitemd-ad-1.mp4"
-      "",                                                           // vertical video 2: e.g. "media/elitemd-ad-2.mp4"
+      "media/elitemd-1.mp4",                                        // 20% off offer ad
+      "media/elitemd-2.mp4",                                        // event talk (brightened)
+      "media/elitemd-3.mp4",                                        // "Step inside EliteMD"
     ],
   },
 
@@ -1341,11 +1342,13 @@ const SITE = {
   const revealStandIns = key => $$('[data-unless="' + key + '"]').forEach(el => { el.hidden = !showIfOk(el); });
 
   // photo rows and embed grids
-  function rowFill(el, list) {          // items are paths, or { src, fit: "contain", pos } to show a picture whole
+  function rowFill(el, list) {          // items are paths, or { src, fit: "contain", pos, wide: true } (wide spans two spots)
     (list || []).filter(Boolean).forEach(it => {
       const src = typeof it === "string" ? it : it.src, d = document.createElement("div"), m = visual(src, "");
       if (it.fit) { m.style.objectFit = it.fit; d.style.background = "#000"; }
       if (it.pos) m.style.objectPosition = it.pos;
+      if (it.wide) d.className = "wide";
+      if (it.ratio) { d.dataset.ratio = it.ratio; d.style.aspectRatio = it.ratio; }   // ratio: the spot takes the picture's own shape
       d.appendChild(m); el.appendChild(d);
     });
   }
@@ -1359,7 +1362,7 @@ const SITE = {
     else if (!SITE.draft) { ip.previousElementSibling.hidden = true; ip.hidden = true; }
   });
   $$(".wide-figure[data-src]").forEach(f => { const v = get(f.dataset.src); if (v) { const i = visual(v, "SPUR visual production team, with roles labelled"); f.appendChild(i); } else f.hidden = true; });
-  $$(".photo-row[data-row]").forEach(el => { rowFill(el, extraPhotos[el.dataset.row]); el.style.setProperty("--n", el.children.length); if (!el.children.length) el.hidden = true; });
+  $$(".photo-row[data-row]").forEach(el => { rowFill(el, extraPhotos[el.dataset.row]); el.style.setProperty("--n", el.children.length); const w = $$(".wide", el).length; if (w) { el.classList.add("has-wide"); el.style.setProperty("--cols", el.children.length + w); } const rs = $$("[data-ratio]", el); if (rs.length && rs.length === el.children.length) { el.classList.add("has-ratio"); el.style.setProperty("--ratio-cols", rs.map(d => d.dataset.ratio + "fr").join(" ")); } if (!el.children.length) el.hidden = true; });
   $$("[data-embeds]").forEach(sec => {
     const list = (get(sec.dataset.embeds) || []).filter(Boolean);
     if (!list.length) return;
