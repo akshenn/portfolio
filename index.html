@@ -1242,6 +1242,18 @@ const SITE = {
   if (SITE.scroll === "snap" && window.matchMedia("(min-width: 1024px)").matches) document.documentElement.classList.add("snap");
 
   /* ---------- turning a value into an image, video, embed or prompt ---------- */
+  // TikTok's (and Instagram's) in-app browser on iPhone forces every playing video full screen, whatever the page asks.
+  // There, videos only play when the visitor taps something; otherwise they sit still on their first frame.
+  const IN_APP = /musical_ly|BytedanceWebview|TikTok|trill|Instagram|FBAN|FBAV/i.test(navigator.userAgent) && /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (IN_APP) {
+    document.documentElement.classList.add("in-app");
+    let lastTap = 0; ["pointerup", "touchend", "click", "keydown"].forEach(e => addEventListener(e, () => { lastTap = Date.now(); }, true));
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function () {
+      const gesture = (navigator.userActivation && navigator.userActivation.isActive) || Date.now() - lastTap < 1000;
+      return gesture ? play.call(this) : Promise.reject(new DOMException("Autoplay off in in-app browser", "NotAllowedError"));
+    };
+  }
   function inlineVideo() {
     const v = document.createElement("video");
     ["playsinline", "webkit-playsinline", "muted", "disablepictureinpicture", "disableremoteplayback"].forEach(a => v.setAttribute(a, ""));
@@ -1286,7 +1298,7 @@ const SITE = {
   function visual(url, alt) {
     if (isVideo(url)) {
       const v = inlineVideo();
-      v.loop = true; v.preload = "metadata"; v.src = url;
+      v.loop = true; v.preload = "metadata"; v.src = IN_APP && !/#/.test(url) ? url + "#t=0.1" : url;
       v.setAttribute("aria-label", alt || "Video");
       if (!reduceMotion) onScreenPlayer.observe(v);
       return v;
