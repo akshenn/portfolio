@@ -1247,10 +1247,11 @@ const SITE = {
   const IN_APP = /musical_ly|BytedanceWebview|TikTok|trill|Instagram|FBAN|FBAV/i.test(navigator.userAgent) && /iPhone|iPad|iPod/i.test(navigator.userAgent);
   if (IN_APP) {
     document.documentElement.classList.add("in-app");
-    let lastTap = 0; ["pointerup", "touchend", "click", "keydown"].forEach(e => addEventListener(e, () => { lastTap = Date.now(); }, true));
+    // only a real tap counts: "click" never fires at the end of a scroll swipe (touchend and user-activation do)
+    let lastTap = 0; ["click", "keydown"].forEach(e => addEventListener(e, () => { lastTap = Date.now(); }, true));
     const play = HTMLMediaElement.prototype.play;
     HTMLMediaElement.prototype.play = function () {
-      const gesture = (navigator.userActivation && navigator.userActivation.isActive) || Date.now() - lastTap < 1000;
+      const gesture = Date.now() - lastTap < 600;
       return gesture ? play.call(this) : Promise.reject(new DOMException("Autoplay off in in-app browser", "NotAllowedError"));
     };
   }
@@ -1258,6 +1259,7 @@ const SITE = {
     const v = document.createElement("video");
     ["playsinline", "webkit-playsinline", "muted", "disablepictureinpicture", "disableremoteplayback"].forEach(a => v.setAttribute(a, ""));
     v.muted = true; v.playsInline = true; v.disablePictureInPicture = true;
+    if (IN_APP) { v.autoplay = false; v.removeAttribute("autoplay"); }
     return v;
   }
   const isVideo = u => /^data:video\//i.test(u) || /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(u);
