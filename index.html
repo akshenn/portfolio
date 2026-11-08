@@ -219,6 +219,7 @@
   .theme-line { font-size: clamp(1.15rem, 1.6vw, 1.4rem); margin: 0 0 1.25rem; color: var(--fg); }
   .photo-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
   .photo-row > * { position: relative; aspect-ratio: 3 / 4; overflow: hidden; background: var(--slot); }
+  .photo-row video, .vtile > video { pointer-events: none; -webkit-touch-callout: none; }
   .photo-row img, .photo-row video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .photo-row.has-wide { grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); }   /* rows with wide items: one line, heights match */
   .photo-row > .wide { grid-column: span 2; aspect-ratio: 3 / 2; }
@@ -1241,6 +1242,12 @@ const SITE = {
   if (SITE.scroll === "snap" && window.matchMedia("(min-width: 1024px)").matches) document.documentElement.classList.add("snap");
 
   /* ---------- turning a value into an image, video, embed or prompt ---------- */
+  function inlineVideo() {
+    const v = document.createElement("video");
+    ["playsinline", "webkit-playsinline", "muted", "disablepictureinpicture", "disableremoteplayback"].forEach(a => v.setAttribute(a, ""));
+    v.muted = true; v.playsInline = true; v.disablePictureInPicture = true;
+    return v;
+  }
   const isVideo = u => /^data:video\//i.test(u) || /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(u);
   const ytId = u => (u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/))([\w-]{6,})/) || [])[1];
   const ytStart = u => (u.match(/[?&](?:t|start)=(\d+)/) || [])[1];
@@ -1278,8 +1285,8 @@ const SITE = {
   }), { threshold: .15 });
   function visual(url, alt) {
     if (isVideo(url)) {
-      const v = document.createElement("video");
-      v.src = url; v.muted = true; v.loop = true; v.playsInline = true; v.preload = "metadata";
+      const v = inlineVideo();
+      v.loop = true; v.preload = "metadata"; v.src = url;
       v.setAttribute("aria-label", alt || "Video");
       if (!reduceMotion) onScreenPlayer.observe(v);
       return v;
@@ -1472,8 +1479,8 @@ const SITE = {
     const state = { sec, video: null, userPaused: reduceMotion, userMuted: false };
     if (!src) { if (SITE.draft) box.appendChild(slot(sec)); [soundBtn, playBtn].forEach(b => b && (b.hidden = true)); return state; }
     if (!isVideo(src)) { const im = visual(src, sec.getAttribute("aria-label")); if (sec.dataset.pos) im.style.objectPosition = sec.dataset.pos; box.appendChild(im); [soundBtn, playBtn].forEach(b => b && (b.hidden = true)); return state; }
-    const v = document.createElement("video");
-    v.src = src; v.loop = true; v.playsInline = true; v.preload = "auto"; v.muted = true;
+    const v = inlineVideo();
+    v.loop = true; v.preload = "auto"; v.src = src;
     const poster = sec.dataset.poster && get(sec.dataset.poster); if (poster) v.poster = poster;
     v.setAttribute("aria-label", sec.getAttribute("aria-label") || "Film");
     box.appendChild(v); state.video = v;
@@ -1546,7 +1553,7 @@ const SITE = {
       if (!v) {
         const sc = SITE.spur.scenes[key];
         if (sc.video) {
-          v = document.createElement("video");
+          v = inlineVideo(); v.removeAttribute("disablepictureinpicture"); v.disablePictureInPicture = false; v.removeAttribute("muted"); v.muted = false;   // scene films keep sound and controls
           v.src = sc.video; v.poster = sc.poster || ""; v.controls = true; v.playsInline = true; v.preload = "metadata";
           v.setAttribute("aria-label", "Scene film: " + key);
           box.appendChild(v);
